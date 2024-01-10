@@ -67,7 +67,7 @@ lap_time_mat_opts = {"use_lap_time_mat": False,             # calculate a lap ti
                      "file": "lap_time_matrix.csv"}         # file name of the lap time matrix (stored in "outputs")
 
 
-def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_param_file_name: str, opt_type: str):
+def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_param_file_path: str, opt_type: str):
     # opt_type:
     #   'shortest_path'       shortest path optimization
     #   'mincurv'             minimum curvature optimization without iterative call
@@ -159,7 +159,7 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
     parser = configparser.ConfigParser()
     pars = {}
 
-    if not parser.read(os.path.join(file_paths["module"], "params", vehicle_param_file_name)):
+    if not parser.read(vehicle_param_file_path):
         raise ValueError('Specified config file does not exist or is empty!')
 
     pars["ggv_file"] = json.loads(parser.get('GENERAL_OPTIONS', 'ggv_file'))
