@@ -163,7 +163,7 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
         file_paths["ggv_file"] = os.path.join(
             file_paths["module"], "inputs", "veh_dyn_info", pars["ggv_file"])
         file_paths["ax_max_machines_file"] = os.path.join(file_paths["module"], "inputs", "veh_dyn_info",
-                                                            pars["ax_max_machines_file"])
+                                                          pars["ax_max_machines_file"])
 
     # ----------------------------------------------------------------------------------------------------------------------
     # IMPORT TRACK AND VEHICLE DYNAMICS INFORMATION ------------------------------------------------------------------------
@@ -570,7 +570,8 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
                                                     bound2_interp=bound2,
                                                     trajectory=trajectory_opt)
 
-def parse_params_file(vehicle_param_file_path, opt_type):
+
+def parse_params_file(vehicle_param_file_path):
     # load vehicle parameter file into a "pars" dict
     parser = configparser.ConfigParser()
     pars = {}
@@ -590,31 +591,30 @@ def parse_params_file(vehicle_param_file_path, opt_type):
     pars["vel_calc_opts"] = json.loads(
         parser.get('GENERAL_OPTIONS', 'vel_calc_opts'))
 
-    if opt_type == 'shortest_path':
-            pars["optim_opts"] = json.loads(parser.get(
-                'OPTIMIZATION_OPTIONS', 'optim_opts_shortest_path'))
+    # Shortest path
+    pars["optim_opts"] = json.loads(parser.get(
+        'OPTIMIZATION_OPTIONS', 'optim_opts_shortest_path'))
 
-    elif opt_type in ['mincurv', 'mincurv_iqp']:
-        pars["optim_opts"] = json.loads(parser.get(
-            'OPTIMIZATION_OPTIONS', 'optim_opts_mincurv'))
+    # Mincurv
+    pars["optim_opts"] = json.loads(parser.get(
+        'OPTIMIZATION_OPTIONS', 'optim_opts_mincurv'))
 
-    elif opt_type == 'mintime':
-        pars["curv_calc_opts"] = json.loads(
-            parser.get('GENERAL_OPTIONS', 'curv_calc_opts'))
-        pars["optim_opts"] = json.loads(parser.get(
-            'OPTIMIZATION_OPTIONS', 'optim_opts_mintime'))
-        pars["vehicle_params_mintime"] = json.loads(
-            parser.get('OPTIMIZATION_OPTIONS', 'vehicle_params_mintime'))
-        pars["tire_params_mintime"] = json.loads(
-            parser.get('OPTIMIZATION_OPTIONS', 'tire_params_mintime'))
-        pars["pwr_params_mintime"] = json.loads(
-            parser.get('OPTIMIZATION_OPTIONS', 'pwr_params_mintime'))
+    # Mintime
+    pars["curv_calc_opts"] = json.loads(
+        parser.get('GENERAL_OPTIONS', 'curv_calc_opts'))
+    pars["optim_opts"] = json.loads(parser.get(
+        'OPTIMIZATION_OPTIONS', 'optim_opts_mintime'))
+    pars["vehicle_params_mintime"] = json.loads(
+        parser.get('OPTIMIZATION_OPTIONS', 'vehicle_params_mintime'))
+    pars["tire_params_mintime"] = json.loads(
+        parser.get('OPTIMIZATION_OPTIONS', 'tire_params_mintime'))
+    pars["pwr_params_mintime"] = json.loads(
+        parser.get('OPTIMIZATION_OPTIONS', 'pwr_params_mintime'))
 
-        # modification of mintime options/parameters
-        pars["optim_opts"]["var_friction"] = mintime_opts["var_friction"]
-        pars["optim_opts"]["warm_start"] = mintime_opts["warm_start"]
-        pars["vehicle_params_mintime"]["wheelbase"] = (pars["vehicle_params_mintime"]["wheelbase_front"]
-                                                        + pars["vehicle_params_mintime"]["wheelbase_rear"])
+    # modification of mintime options/parameters
+    pars["optim_opts"]["var_friction"] = mintime_opts["var_friction"]
+    pars["optim_opts"]["warm_start"] = mintime_opts["warm_start"]
+    pars["vehicle_params_mintime"]["wheelbase"] = (pars["vehicle_params_mintime"]["wheelbase_front"]
+                                                   + pars["vehicle_params_mintime"]["wheelbase_rear"])
 
-        
-        return pars
+    return pars
