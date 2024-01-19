@@ -166,8 +166,8 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
         pars["optim_opts"] = pars["optim_opts_mintime"]
 
         # modification of mintime options/parameters
-        pars["optim_opts"]["var_friction"] = pars["optim_opts_mintime"]["var_friction"]
-        pars["optim_opts"]["warm_start"] = pars["optim_opts_mintime"]["warm_start"]
+        pars["optim_opts"]["var_friction"] = mintime_opts["var_friction"]
+        pars["optim_opts"]["warm_start"] = mintime_opts["warm_start"]
 
     # set import path for ggv diagram and ax_max_machines (if required)
     if not (opt_type == 'mintime' and not mintime_opts["recalc_vel_profile_by_tph"]):
