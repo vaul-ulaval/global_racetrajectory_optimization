@@ -1,14 +1,16 @@
+import sys
+from typing import Union
+
+import matplotlib.pyplot as plt
 import numpy as np
 import trajectory_planning_helpers as tph
-import sys
-import matplotlib.pyplot as plt
 
 
 def prep_track(reftrack_imp: np.ndarray,
                reg_smooth_opts: dict,
                stepsize_opts: dict,
                debug: bool = True,
-               min_width: float = None) -> tuple:
+               min_width: Union[float, None] = None) -> tuple:
     """
     Created by:
     Alexander Heilmeier
