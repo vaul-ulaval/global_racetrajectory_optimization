@@ -1,6 +1,7 @@
-import numpy as np
-import uuid
 import hashlib
+import uuid
+
+import numpy as np
 
 
 def export_traj_race(file_paths: dict,
@@ -57,7 +58,7 @@ def export_traj_race_f110(file_paths: dict,
 
     # export race trajectory
     fmt = "%.7f,%.7f,%.7f,%7f"
-    with open(file_paths["traj_race_export"], 'ab') as fh:
+    with open(file_paths["traj_race_export"], 'wb') as fh:
         np.savetxt(fh, traj_race[:, [1,2,5,3]], fmt=fmt, comments='')
 
 

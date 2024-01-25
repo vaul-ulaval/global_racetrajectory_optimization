@@ -219,7 +219,7 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
                                                   plot_debug=plot_opts.mincurv_curv_lin)[0]
 
     elif opt_type == 'mincurv_iqp':
-        alpha_opt, reftrack_interp, normvec_normalized_interp = tph.trajectory_planning_helpers.iqp_handler.\
+        alpha_opt, reftrack_interp, normvec_normalized_interp, _, _, _, _, = tph.trajectory_planning_helpers.iqp_handler.\
             iqp_handler(reftrack=reftrack_interp,
                         normvectors=normvec_normalized_interp,
                         A=a_interp,
