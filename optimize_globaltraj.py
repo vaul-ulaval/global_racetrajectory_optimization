@@ -22,9 +22,11 @@ class PlotOptions:
     mincurv_curv_lin: bool = False                  # plot curv. linearization (original and solution based) (mincurv only)
     raceline: bool = True                           # plot optimized path
     imported_bounds: bool = True                    # plot imported bounds (analyze difference to interpolated bounds)
+    raceline_curv: bool = False                     # plot curvature profile of optimized path
     racetraj_vel: bool = False                      # plot velocity profile
     racetraj_vel_3d: bool = True                    # plot 3D velocity profile above raceline
     racetraj_vel_3d_stepsize: float = 0.5           # [m] vertical lines stepsize in 3D velocity profile plot
+    spline_normals: bool = False                    # plot spline normals to check for crossings
     mintime_plots: bool = False                     # plot states, controls, friction coeffs etc. (mintime only)
 
 @dataclass
