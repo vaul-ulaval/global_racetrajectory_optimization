@@ -133,7 +133,7 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
         pars["optim_opts"]["warm_start"] = mintime_opts.warm_start
 
     # set import path for ggv diagram and ax_max_machines (if required)
-    if not (opt_type == 'mintime' and not mintime_opts.recalc_vel_profile_by_tph):
+    if opt_type != 'mintime' or mintime_opts.recalc_vel_profile_by_tph:
         file_paths["ggv_file"] = os.path.join(
             file_paths["module"], "inputs", "veh_dyn_info", pars["ggv_file"])
         file_paths["ax_max_machines_file"] = os.path.join(file_paths["module"], "inputs", "veh_dyn_info",
@@ -152,7 +152,7 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
                                                                    width_veh=pars["veh_params"]["width"])
 
     # import ggv and ax_max_machines (if required)
-    if not (opt_type == 'mintime' and not mintime_opts.recalc_vel_profile_by_tph):
+    if opt_type != 'mintime' or mintime_opts.recalc_vel_profile_by_tph:
         ggv, ax_max_machines = tph.trajectory_planning_helpers.import_veh_dyn_info.\
             import_veh_dyn_info(ggv_import_path=file_paths["ggv_file"],
                                 ax_max_machines_import_path=file_paths["ax_max_machines_file"])
