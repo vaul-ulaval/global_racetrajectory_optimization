@@ -244,7 +244,7 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
     elif opt_type == 'mintime':
         # reftrack_interp, a_interp and normvec_normalized_interp are returned for the case that non-regular sampling was
         # applied
-        alpha_opt, v_opt, reftrack_interp, a_interp_tmp, normvec_normalized_interp = opt_mintime.\
+        mintime_result = opt_mintime.\
             opt_mintime(reftrack=reftrack_interp,
                         coeffs_x=coeffs_x_interp,
                         coeffs_y=coeffs_y_interp,
@@ -255,6 +255,12 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
                         export_path=file_paths["mintime_export"],
                         print_debug=debug,
                         plot_debug=plot_opts.mintime_plots)
+        
+        # Optimization did not suceed
+        if mintime_result is None:
+            return
+        
+        alpha_opt, v_opt, reftrack_interp, a_interp_tmp, normvec_normalized_interp = mintime_result 
 
         # replace a_interp if necessary
         if a_interp_tmp is not None:

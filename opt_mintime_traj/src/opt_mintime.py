@@ -1,8 +1,10 @@
 import os
 import sys
 import time
-import numpy as np
+from typing import Union
+
 import casadi as ca
+import numpy as np
 import opt_mintime_traj
 import trajectory_planning_helpers as tph
 
@@ -16,7 +18,7 @@ def opt_mintime(reftrack: np.ndarray,
                 tpadata_path: str,
                 export_path: str,
                 print_debug: bool = False,
-                plot_debug: bool = False) -> tuple:
+                plot_debug: bool = False) -> Union[tuple, None]:
     """
     Created by:
     Fabian Christ
@@ -890,12 +892,12 @@ def opt_mintime(reftrack: np.ndarray,
             lam_g0 = np.loadtxt(os.path.join(export_path, 'lam_g0.csv'))
         except IOError:
             print('\033[91m' + 'WARNING: Failed to load warm start files!' + '\033[0m')
-            sys.exit(1)
+            return None
 
     # check warm start files
     if pars["optim_opts"]["warm_start"] and not len(w0) == len(lbw):
         print('\033[91m' + 'WARNING: Warm start files do not fit to the dimension of the NLP!' + '\033[0m')
-        sys.exit(1)
+        return None
 
     # create solver instance
     solver = ca.nlpsol("solver", "ipopt", nlp, opts)
@@ -918,7 +920,7 @@ def opt_mintime(reftrack: np.ndarray,
 
     if solver.stats()['return_status'] != 'Solve_Succeeded':
         print('\033[91m' + 'ERROR: Optimization did not succeed!' + '\033[0m')
-        sys.exit(1)
+        return None
 
     # ------------------------------------------------------------------------------------------------------------------
     # EXTRACT SOLUTION -------------------------------------------------------------------------------------------------
