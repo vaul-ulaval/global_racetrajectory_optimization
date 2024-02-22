@@ -59,6 +59,7 @@ OptimizationType = Literal['shortest_path', 'mincurv', 'mincurv_iqp', 'mintime']
 
 
 def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_param_file_path: str, 
+                                   ggv_file_path: str, ax_max_machines_file_path: str,
                                    opt_type: OptimizationType,
                                    imp_opts: ImportOptions = ImportOptions(), plot_opts: PlotOptions = PlotOptions(),
                                    mintime_opts: MintimeOptions = MintimeOptions(), lap_time_mat_opts: LapTimeOptions = LapTimeOptions()):
@@ -136,10 +137,8 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
 
     # set import path for ggv diagram and ax_max_machines (if required)
     if opt_type != 'mintime' or mintime_opts.recalc_vel_profile_by_tph:
-        file_paths["ggv_file"] = os.path.join(
-            file_paths["module"], "inputs", "veh_dyn_info", pars["ggv_file"])
-        file_paths["ax_max_machines_file"] = os.path.join(file_paths["module"], "inputs", "veh_dyn_info",
-                                                          pars["ax_max_machines_file"])
+        file_paths["ggv_file"] = ggv_file_path
+        file_paths["ax_max_machines_file"] = ax_max_machines_file_path
 
     # ----------------------------------------------------------------------------------------------------------------------
     # IMPORT TRACK AND VEHICLE DYNAMICS INFORMATION ------------------------------------------------------------------------
