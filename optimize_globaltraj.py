@@ -10,60 +10,103 @@ from typing import Union
 import matplotlib.pyplot as plt
 import numpy as np
 import trajectory_planning_helpers as tph
-from helper_funcs_glob.src import (check_traj, export_traj_ltpl,
-                                   export_traj_race, import_track, prep_track,
-                                   result_plots)
+from helper_funcs_glob.src import (
+    check_traj,
+    export_traj_ltpl,
+    export_traj_race,
+    import_track,
+    prep_track,
+    result_plots,
+)
 from opt_mintime_traj.src import opt_mintime
 from typing_extensions import Literal
 
-debug: bool = True                                  # print console messages
+debug: bool = True  # print console messages
+
+
 @dataclass
 class PlotOptions:
-    mincurv_curv_lin: bool = False                  # plot curv. linearization (original and solution based) (mincurv only)
-    raceline: bool = True                           # plot optimized path
-    imported_bounds: bool = True                    # plot imported bounds (analyze difference to interpolated bounds)
-    raceline_curv: bool = False                     # plot curvature profile of optimized path
-    racetraj_vel: bool = False                      # plot velocity profile
-    racetraj_vel_3d: bool = True                    # plot 3D velocity profile above raceline
-    racetraj_vel_3d_stepsize: float = 0.5           # [m] vertical lines stepsize in 3D velocity profile plot
-    spline_normals: bool = False                    # plot spline normals to check for crossings
-    mintime_plots: bool = False                     # plot states, controls, friction coeffs etc. (mintime only)
+    mincurv_curv_lin: bool = (
+        False  # plot curv. linearization (original and solution based) (mincurv only)
+    )
+    raceline: bool = True  # plot optimized path
+    imported_bounds: bool = (
+        True  # plot imported bounds (analyze difference to interpolated bounds)
+    )
+    raceline_curv: bool = False  # plot curvature profile of optimized path
+    racetraj_vel: bool = False  # plot velocity profile
+    racetraj_vel_3d: bool = True  # plot 3D velocity profile above raceline
+    racetraj_vel_3d_stepsize: float = (
+        0.5  # [m] vertical lines stepsize in 3D velocity profile plot
+    )
+    spline_normals: bool = False  # plot spline normals to check for crossings
+    mintime_plots: bool = (
+        False  # plot states, controls, friction coeffs etc. (mintime only)
+    )
+
 
 @dataclass
 class ImportOptions:
-    flip_imp_track: bool = False                    # flip imported track to reverse direction
-    set_new_start: bool = False                     # set new starting point (changes order, not coordinates)
-    new_start: np.ndarray = np.array([0.0, 0.0])    # [x_m, y_m]
-    min_track_width: Union[float, None] = None      # [m] minimum enforced track width (set None to deactivate)
-    num_laps: int = 1                               # number of laps to be driven (significant with powertrain-option),
+    flip_imp_track: bool = False  # flip imported track to reverse direction
+    set_new_start: bool = (
+        False  # set new starting point (changes order, not coordinates)
+    )
+    new_start: np.ndarray = np.array([0.0, 0.0])  # [x_m, y_m]
+    min_track_width: Union[
+        float, None
+    ] = None  # [m] minimum enforced track width (set None to deactivate)
+    num_laps: int = (
+        1  # number of laps to be driven (significant with powertrain-option),
+    )
 
-@dataclass 
+
+@dataclass
 class MintimeOptions:
-    tpadata: Union[str, None] = None                # set individual friction map data file if desired (e.g. for varmue maps), else set None,
-    warm_start: bool = False                        # [True/False] warm start IPOPT if previous result is available for current track
-    var_friction: Union[str, None] = None           # [-] None, "linear", "gauss" -> set if variable friction coefficients should be used
-    reopt_mintime_solution: bool = False            # reoptimization of the mintime solution by min. curv. opt. for improved curv. smoothness
-    recalc_vel_profile_by_tph: bool = False         # override mintime velocity profile by ggv based calculation (see TPH package)
+    tpadata: Union[
+        str, None
+    ] = None  # set individual friction map data file if desired (e.g. for varmue maps), else set None,
+    warm_start: bool = False  # [True/False] warm start IPOPT if previous result is available for current track
+    var_friction: Union[
+        str, None
+    ] = None  # [-] None, "linear", "gauss" -> set if variable friction coefficients should be used
+    reopt_mintime_solution: bool = False  # reoptimization of the mintime solution by min. curv. opt. for improved curv. smoothness
+    recalc_vel_profile_by_tph: bool = False  # override mintime velocity profile by ggv based calculation (see TPH package)
 
 
 @dataclass
 class LapTimeOptions:
-    use_lap_time_mat: bool = False                                          # calculate a lap time matrix (diff. top speeds and scales)
-    gg_scale_range: list = field(default_factory=lambda: [0.3, 1.0])        # range of gg scales to be covered
-    gg_scale_stepsize: float = 0.05                                         # step size to be applied
-    top_speed_range: list = field(default_factory=lambda: [1, 20])          # range of top speeds to be simulated [in km/h]
-    top_speed_stepsize: float = 5.0                                         # step size to be applied
-    file: str = "lap_time_matrix.csv"                                       # file name of the lap time matrix (stored in "outputs")
+    use_lap_time_mat: bool = (
+        False  # calculate a lap time matrix (diff. top speeds and scales)
+    )
+    gg_scale_range: list = field(
+        default_factory=lambda: [0.3, 1.0]
+    )  # range of gg scales to be covered
+    gg_scale_stepsize: float = 0.05  # step size to be applied
+    top_speed_range: list = field(
+        default_factory=lambda: [1, 20]
+    )  # range of top speeds to be simulated [in km/h]
+    top_speed_stepsize: float = 5.0  # step size to be applied
+    file: str = (
+        "lap_time_matrix.csv"  # file name of the lap time matrix (stored in "outputs")
+    )
 
-OptimizationType = Literal['shortest_path', 'mincurv', 'mincurv_iqp', 'mintime']
+
+OptimizationType = Literal["shortest_path", "mincurv", "mincurv_iqp", "mintime"]
 
 
-def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_param_file_path: str, 
-                                   ggv_file_path: str, ax_max_machines_file_path: str,
-                                   opt_type: OptimizationType,
-                                   imp_opts: ImportOptions = ImportOptions(), plot_opts: PlotOptions = PlotOptions(),
-                                   mintime_opts: MintimeOptions = MintimeOptions(), lap_time_mat_opts: LapTimeOptions = LapTimeOptions()):
-    track_name = track_path.split('/')[-1]
+def launch_globaltraj_optimization(
+    track_path: str,
+    output_path: str,
+    vehicle_param_file_path: str,
+    ggv_file_path: str,
+    ax_max_machines_file_path: str,
+    opt_type: OptimizationType,
+    imp_opts: ImportOptions = ImportOptions(),
+    plot_opts: PlotOptions = PlotOptions(),
+    mintime_opts: MintimeOptions = MintimeOptions(),
+    lap_time_mat_opts: LapTimeOptions = LapTimeOptions(),
+):
+    track_name = track_path.split("/")[-1]
 
     file_paths = {}
     file_paths["module"] = os.path.dirname(os.path.abspath(__file__))
@@ -74,49 +117,68 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
     if opt_type not in ["shortest_path", "mincurv", "mincurv_iqp", "mintime"]:
         raise IOError("Unknown optimization type!")
 
-    if opt_type == "mintime" and not mintime_opts.recalc_vel_profile_by_tph and lap_time_mat_opts.use_lap_time_mat:
-        raise IOError("Lap time calculation table should be created but velocity profile recalculation with TPH solver is"
-                      " not allowed!")
+    if (
+        opt_type == "mintime"
+        and not mintime_opts.recalc_vel_profile_by_tph
+        and lap_time_mat_opts.use_lap_time_mat
+    ):
+        raise IOError(
+            "Lap time calculation table should be created but velocity profile recalculation with TPH solver is"
+            " not allowed!"
+        )
 
     # ----------------------------------------------------------------------------------------------------------------------
     # INITIALIZATION OF PATHS ----------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
 
     # assemble friction map import paths
-    file_paths["tpamap"] = os.path.join(file_paths["module"], "inputs", "frictionmaps",
-                                        track_name + "_tpamap.csv")
+    file_paths["tpamap"] = os.path.join(
+        file_paths["module"], "inputs", "frictionmaps", track_name + "_tpamap.csv"
+    )
 
     if mintime_opts.tpadata is None:
-        file_paths["tpadata"] = os.path.join(file_paths["module"], "inputs", "frictionmaps",
-                                             track_name + "_tpadata.json")
+        file_paths["tpadata"] = os.path.join(
+            file_paths["module"], "inputs", "frictionmaps", track_name + "_tpadata.json"
+        )
     else:
         file_paths["tpadata"] = os.path.join(
-            file_paths["module"], "inputs", "frictionmaps", mintime_opts.tpadata)
+            file_paths["module"], "inputs", "frictionmaps", mintime_opts.tpadata
+        )
 
     # check if friction map files are existing if the var_friction option was set
-    if opt_type == 'mintime' \
-            and mintime_opts.var_friction is not None \
-            and not (os.path.exists(file_paths["tpadata"]) and os.path.exists(file_paths["tpamap"])):
-
+    if (
+        opt_type == "mintime"
+        and mintime_opts.var_friction is not None
+        and not (
+            os.path.exists(file_paths["tpadata"])
+            and os.path.exists(file_paths["tpamap"])
+        )
+    ):
         mintime_opts.var_friction = None
-        print("WARNING: var_friction option is not None but friction map data is missing for current track -> Setting"
-              " var_friction to None!")
+        print(
+            "WARNING: var_friction option is not None but friction map data is missing for current track -> Setting"
+            " var_friction to None!"
+        )
 
     # create outputs folder(s)
     os.makedirs(file_paths["module"] + f"/outputs/{track_name}", exist_ok=True)
 
     TIME = str(datetime.now())
-    if opt_type == 'mintime':
+    if opt_type == "mintime":
         os.makedirs(
-            file_paths["module"] + f"/outputs/{track_name}/mintime-{TIME}", exist_ok=True)
+            file_paths["module"] + f"/outputs/{track_name}/mintime-{TIME}",
+            exist_ok=True,
+        )
 
     # assemble export paths
     file_paths["mintime_export"] = os.path.join(
-        file_paths["module"], f"outputs/{track_name}", f"mintime-{TIME}")
+        file_paths["module"], f"outputs/{track_name}", f"mintime-{TIME}"
+    )
     file_paths["traj_race_export"] = output_path
     # file_paths["traj_ltpl_export"] = os.path.join(file_paths["module"], "outputs", "traj_ltpl_cl.csv")
     file_paths["lap_time_mat_export"] = os.path.join(
-        file_paths["module"], f"outputs/{track_name}", lap_time_mat_opts.file)
+        file_paths["module"], f"outputs/{track_name}", lap_time_mat_opts.file
+    )
 
     # ----------------------------------------------------------------------------------------------------------------------
     # IMPORT VEHICLE DEPENDENT PARAMETERS ----------------------------------------------------------------------------------
@@ -124,11 +186,11 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
 
     pars = parse_params_file(vehicle_param_file_path)
 
-    if opt_type == 'shortest_path':
+    if opt_type == "shortest_path":
         pars["optim_opts"] = pars["optim_opts_shortest_path"]
-    elif opt_type in ['mincurv', 'mincurv_iqp']:
+    elif opt_type in ["mincurv", "mincurv_iqp"]:
         pars["optim_opts"] = pars["optim_opts_mincurv"]
-    elif opt_type == 'mintime':
+    elif opt_type == "mintime":
         pars["optim_opts"] = pars["optim_opts_mintime"]
 
         # modification of mintime options/parameters
@@ -136,7 +198,7 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
         pars["optim_opts"]["warm_start"] = mintime_opts.warm_start
 
     # set import path for ggv diagram and ax_max_machines (if required)
-    if opt_type != 'mintime' or mintime_opts.recalc_vel_profile_by_tph:
+    if opt_type != "mintime" or mintime_opts.recalc_vel_profile_by_tph:
         file_paths["ggv_file"] = ggv_file_path
         file_paths["ax_max_machines_file"] = ax_max_machines_file_path
 
@@ -148,30 +210,43 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
     t_start = time.perf_counter()
 
     # import track
-    reftrack_imp = import_track.import_track(imp_opts=imp_opts.__dict__,
-                                                                   file_path=track_path,
-                                                                   width_veh=pars["veh_params"]["width"])
+    reftrack_imp = import_track.import_track(
+        imp_opts=imp_opts.__dict__,
+        file_path=track_path,
+        width_veh=pars["veh_params"]["width"],
+    )
 
     # import ggv and ax_max_machines (if required)
-    if opt_type != 'mintime' or mintime_opts.recalc_vel_profile_by_tph:
-        ggv, ax_max_machines = tph.trajectory_planning_helpers.import_veh_dyn_info.\
-            import_veh_dyn_info(ggv_import_path=file_paths["ggv_file"],
-                                ax_max_machines_import_path=file_paths["ax_max_machines_file"])
+    if opt_type != "mintime" or mintime_opts.recalc_vel_profile_by_tph:
+        (
+            ggv,
+            ax_max_machines,
+        ) = tph.trajectory_planning_helpers.import_veh_dyn_info.import_veh_dyn_info(
+            ggv_import_path=file_paths["ggv_file"],
+            ax_max_machines_import_path=file_paths["ax_max_machines_file"],
+        )
     else:
         ggv = None
         ax_max_machines = None
 
     # set ax_pos_safe / ax_neg_safe / ay_safe if required and not set in parameters file
-    if opt_type == 'mintime' and pars["optim_opts"]["safe_traj"] \
-            and (pars["optim_opts"]["ax_pos_safe"] is None
-                 or pars["optim_opts"]["ax_neg_safe"] is None
-                 or pars["optim_opts"]["ay_safe"] is None):
-
+    if (
+        opt_type == "mintime"
+        and pars["optim_opts"]["safe_traj"]
+        and (
+            pars["optim_opts"]["ax_pos_safe"] is None
+            or pars["optim_opts"]["ax_neg_safe"] is None
+            or pars["optim_opts"]["ay_safe"] is None
+        )
+    ):
         # get ggv if not available
         if ggv is None:
-            ggv = tph.trajectory_planning_helpers.import_veh_dyn_info. \
-                import_veh_dyn_info(ggv_import_path=file_paths["ggv_file"],
-                                    ax_max_machines_import_path=file_paths["ax_max_machines_file"])[0]
+            ggv = (
+                tph.trajectory_planning_helpers.import_veh_dyn_info.import_veh_dyn_info(
+                    ggv_import_path=file_paths["ggv_file"],
+                    ax_max_machines_import_path=file_paths["ax_max_machines_file"],
+                )[0]
+            )
 
         # limit accelerations
         if pars["optim_opts"]["ax_pos_safe"] is None:
@@ -185,12 +260,19 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
     # PREPARE REFTRACK -----------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
 
-    reftrack_interp, normvec_normalized_interp, a_interp, coeffs_x_interp, coeffs_y_interp = \
-        prep_track.prep_track(reftrack_imp=reftrack_imp,
-                                                    reg_smooth_opts=pars["reg_smooth_opts"],
-                                                    stepsize_opts=pars["stepsize_opts"],
-                                                    debug=debug,
-                                                    min_width=imp_opts.min_track_width)
+    (
+        reftrack_interp,
+        normvec_normalized_interp,
+        a_interp,
+        coeffs_x_interp,
+        coeffs_y_interp,
+    ) = prep_track.prep_track(
+        reftrack_imp=reftrack_imp,
+        reg_smooth_opts=pars["reg_smooth_opts"],
+        stepsize_opts=pars["stepsize_opts"],
+        debug=debug,
+        min_width=imp_opts.min_track_width,
+    )
 
     # ----------------------------------------------------------------------------------------------------------------------
     # CALL OPTIMIZATION ----------------------------------------------------------------------------------------------------
@@ -198,86 +280,106 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
 
     # if reoptimization of mintime solution is used afterwards we have to consider some additional deviation in the first
     # optimization
-    if opt_type == 'mintime' and mintime_opts.reopt_mintime_solution:
-        w_veh_tmp = pars["optim_opts"]["width_opt"] + \
-            (pars["optim_opts"]["w_tr_reopt"] -
-             pars["optim_opts"]["w_veh_reopt"])
+    if opt_type == "mintime" and mintime_opts.reopt_mintime_solution:
+        w_veh_tmp = pars["optim_opts"]["width_opt"] + (
+            pars["optim_opts"]["w_tr_reopt"] - pars["optim_opts"]["w_veh_reopt"]
+        )
         w_veh_tmp += pars["optim_opts"]["w_add_spl_regr"]
         pars_tmp = copy.deepcopy(pars)
         pars_tmp["optim_opts"]["width_opt"] = w_veh_tmp
     else:
         pars_tmp = pars
 
-    v_opt = None  
+    v_opt = None
 
     # call optimization
-    if opt_type == 'mincurv':
-        alpha_opt = tph.trajectory_planning_helpers.opt_min_curv.opt_min_curv(reftrack=reftrack_interp,
-                                                  normvectors=normvec_normalized_interp,
-                                                  A=a_interp,
-                                                  kappa_bound=pars["veh_params"]["curvlim"],
-                                                  w_veh=pars["optim_opts"]["width_opt"],
-                                                  print_debug=debug,
-                                                  plot_debug=plot_opts.mincurv_curv_lin)[0]
+    if opt_type == "mincurv":
+        alpha_opt = tph.trajectory_planning_helpers.opt_min_curv.opt_min_curv(
+            reftrack=reftrack_interp,
+            normvectors=normvec_normalized_interp,
+            A=a_interp,
+            kappa_bound=pars["veh_params"]["curvlim"],
+            w_veh=pars["optim_opts"]["width_opt"],
+            print_debug=debug,
+            plot_debug=plot_opts.mincurv_curv_lin,
+        )[0]
 
-    elif opt_type == 'mincurv_iqp':
-        alpha_opt, reftrack_interp, normvec_normalized_interp, _, _, _, _, = tph.trajectory_planning_helpers.iqp_handler.\
-            iqp_handler(reftrack=reftrack_interp,
-                        normvectors=normvec_normalized_interp,
-                        A=a_interp,
-                        kappa_bound=pars["veh_params"]["curvlim"],
-                        w_veh=pars["optim_opts"]["width_opt"],
-                        print_debug=debug,
-                        plot_debug=plot_opts.mincurv_curv_lin,
-                        stepsize_interp=pars["stepsize_opts"]["stepsize_reg"],
-                        iters_min=pars["optim_opts"]["iqp_iters_min"],
-                        curv_error_allowed=pars["optim_opts"]["iqp_curverror_allowed"])
-                        
+    elif opt_type == "mincurv_iqp":
+        (
+            alpha_opt,
+            reftrack_interp,
+            normvec_normalized_interp,
+            _,
+            _,
+            _,
+            _,
+        ) = tph.trajectory_planning_helpers.iqp_handler.iqp_handler(
+            reftrack=reftrack_interp,
+            normvectors=normvec_normalized_interp,
+            A=a_interp,
+            kappa_bound=pars["veh_params"]["curvlim"],
+            w_veh=pars["optim_opts"]["width_opt"],
+            print_debug=debug,
+            plot_debug=plot_opts.mincurv_curv_lin,
+            stepsize_interp=pars["stepsize_opts"]["stepsize_reg"],
+            iters_min=pars["optim_opts"]["iqp_iters_min"],
+            curv_error_allowed=pars["optim_opts"]["iqp_curverror_allowed"],
+        )
 
-    elif opt_type == 'shortest_path':
-        alpha_opt = tph.trajectory_planning_helpers.opt_shortest_path.opt_shortest_path(reftrack=reftrack_interp,
-                                                            normvectors=normvec_normalized_interp,
-                                                            w_veh=pars["optim_opts"]["width_opt"],
-                                                            print_debug=debug)
-  
-    elif opt_type == 'mintime':
+    elif opt_type == "shortest_path":
+        alpha_opt = tph.trajectory_planning_helpers.opt_shortest_path.opt_shortest_path(
+            reftrack=reftrack_interp,
+            normvectors=normvec_normalized_interp,
+            w_veh=pars["optim_opts"]["width_opt"],
+            print_debug=debug,
+        )
+
+    elif opt_type == "mintime":
         # reftrack_interp, a_interp and normvec_normalized_interp are returned for the case that non-regular sampling was
         # applied
-        mintime_result = opt_mintime.\
-            opt_mintime(reftrack=reftrack_interp,
-                        coeffs_x=coeffs_x_interp,
-                        coeffs_y=coeffs_y_interp,
-                        normvectors=normvec_normalized_interp,
-                        pars=pars_tmp,
-                        tpamap_path=file_paths["tpamap"],
-                        tpadata_path=file_paths["tpadata"],
-                        export_path=file_paths["mintime_export"],
-                        print_debug=debug,
-                        plot_debug=plot_opts.mintime_plots)
-        
+        mintime_result = opt_mintime.opt_mintime(
+            reftrack=reftrack_interp,
+            coeffs_x=coeffs_x_interp,
+            coeffs_y=coeffs_y_interp,
+            normvectors=normvec_normalized_interp,
+            pars=pars_tmp,
+            tpamap_path=file_paths["tpamap"],
+            tpadata_path=file_paths["tpadata"],
+            export_path=file_paths["mintime_export"],
+            print_debug=debug,
+            plot_debug=plot_opts.mintime_plots,
+        )
+
         # Optimization did not suceed
         if mintime_result is None:
             return
-        
-        alpha_opt, v_opt, reftrack_interp, a_interp_tmp, normvec_normalized_interp = mintime_result 
+
+        (
+            alpha_opt,
+            v_opt,
+            reftrack_interp,
+            a_interp_tmp,
+            normvec_normalized_interp,
+        ) = mintime_result
 
         # replace a_interp if necessary
         if a_interp_tmp is not None:
             a_interp = a_interp_tmp
 
     else:
-        raise ValueError('Unknown optimization type!')
+        raise ValueError("Unknown optimization type!")
         # alpha_opt = np.zeros(reftrack_interp.shape[0])
 
     # ----------------------------------------------------------------------------------------------------------------------
     # REOPTIMIZATION OF THE MINTIME SOLUTION -------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
 
-    if opt_type == 'mintime' and mintime_opts.reopt_mintime_solution:
-
+    if opt_type == "mintime" and mintime_opts.reopt_mintime_solution:
         # get raceline solution of the time-optimal trajectory
-        raceline_mintime = reftrack_interp[:, :2] + \
-            np.expand_dims(alpha_opt, 1) * normvec_normalized_interp
+        raceline_mintime = (
+            reftrack_interp[:, :2]
+            + np.expand_dims(alpha_opt, 1) * normvec_normalized_interp
+        )
 
         # calculate new track boundaries around raceline solution depending on alpha_opt values
         w_tr_right_mintime = reftrack_interp[:, 2] - alpha_opt
@@ -285,104 +387,147 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
 
         # create new reference track around the raceline
         racetrack_mintime = np.column_stack(
-            (raceline_mintime, w_tr_right_mintime, w_tr_left_mintime))
+            (raceline_mintime, w_tr_right_mintime, w_tr_left_mintime)
+        )
 
         # use spline approximation a second time
-        reftrack_interp, normvec_normalized_interp, a_interp = \
-            prep_track.prep_track(reftrack_imp=racetrack_mintime, # type: ignore
-                                                        reg_smooth_opts=pars["reg_smooth_opts"],
-                                                        stepsize_opts=pars["stepsize_opts"],
-                                                        debug=False,
-                                                        min_width=imp_opts.min_track_width)[:3]
+        reftrack_interp, normvec_normalized_interp, a_interp = prep_track.prep_track(
+            reftrack_imp=racetrack_mintime,  # type: ignore
+            reg_smooth_opts=pars["reg_smooth_opts"],
+            stepsize_opts=pars["stepsize_opts"],
+            debug=False,
+            min_width=imp_opts.min_track_width,
+        )[:3]
 
         # set artificial track widths for reoptimization
-        w_tr_tmp = 0.5 * pars["optim_opts"]["w_tr_reopt"] * \
-            np.ones(reftrack_interp.shape[0])
+        w_tr_tmp = (
+            0.5 * pars["optim_opts"]["w_tr_reopt"] * np.ones(reftrack_interp.shape[0])
+        )
         racetrack_mintime_reopt = np.column_stack(
-            (reftrack_interp[:, :2], w_tr_tmp, w_tr_tmp))
+            (reftrack_interp[:, :2], w_tr_tmp, w_tr_tmp)
+        )
 
         # call mincurv reoptimization
-        alpha_opt = tph.trajectory_planning_helpers.opt_min_curv.opt_min_curv(reftrack=racetrack_mintime_reopt, # type: ignore
-                                                  normvectors=normvec_normalized_interp,
-                                                  A=a_interp,
-                                                  kappa_bound=pars["veh_params"]["curvlim"],
-                                                  w_veh=pars["optim_opts"]["w_veh_reopt"],
-                                                  print_debug=debug,
-                                                  plot_debug=plot_opts.mincurv_curv_lin)[0]
+        alpha_opt = tph.trajectory_planning_helpers.opt_min_curv.opt_min_curv(
+            reftrack=racetrack_mintime_reopt,  # type: ignore
+            normvectors=normvec_normalized_interp,
+            A=a_interp,
+            kappa_bound=pars["veh_params"]["curvlim"],
+            w_veh=pars["optim_opts"]["w_veh_reopt"],
+            print_debug=debug,
+            plot_debug=plot_opts.mincurv_curv_lin,
+        )[0]
 
         # calculate minimum distance from raceline to bounds and print it
         if debug:
-            raceline_reopt = reftrack_interp[:, :2] + \
-                np.expand_dims(alpha_opt, 1) * normvec_normalized_interp
-            bound_r_reopt = (reftrack_interp[:, :2]
-                             + np.expand_dims(reftrack_interp[:, 2], axis=1) * normvec_normalized_interp)
-            bound_l_reopt = (reftrack_interp[:, :2]
-                             - np.expand_dims(reftrack_interp[:, 3], axis=1) * normvec_normalized_interp)
+            raceline_reopt = (
+                reftrack_interp[:, :2]
+                + np.expand_dims(alpha_opt, 1) * normvec_normalized_interp
+            )
+            bound_r_reopt = (
+                reftrack_interp[:, :2]
+                + np.expand_dims(reftrack_interp[:, 2], axis=1)
+                * normvec_normalized_interp
+            )
+            bound_l_reopt = (
+                reftrack_interp[:, :2]
+                - np.expand_dims(reftrack_interp[:, 3], axis=1)
+                * normvec_normalized_interp
+            )
 
             d_r_reopt = np.hypot(
-                raceline_reopt[:, 0] - bound_r_reopt[:, 0], raceline_reopt[:, 1] - bound_r_reopt[:, 1]) # type: ignore
+                raceline_reopt[:, 0] - bound_r_reopt[:, 0],
+                raceline_reopt[:, 1] - bound_r_reopt[:, 1],
+            )  # type: ignore
             d_l_reopt = np.hypot(
-                raceline_reopt[:, 0] - bound_l_reopt[:, 0], raceline_reopt[:, 1] - bound_l_reopt[:, 1]) # type: ignore
+                raceline_reopt[:, 0] - bound_l_reopt[:, 0],
+                raceline_reopt[:, 1] - bound_l_reopt[:, 1],
+            )  # type: ignore
 
-            print("INFO: Mintime reoptimization: minimum distance to right/left bound: %.2fm / %.2fm"
-                  % (np.amin(d_r_reopt) - pars["veh_params"]["width"] / 2,
-                     np.amin(d_l_reopt) - pars["veh_params"]["width"] / 2))
+            print(
+                "INFO: Mintime reoptimization: minimum distance to right/left bound: %.2fm / %.2fm"
+                % (
+                    np.amin(d_r_reopt) - pars["veh_params"]["width"] / 2,
+                    np.amin(d_l_reopt) - pars["veh_params"]["width"] / 2,
+                )
+            )
 
     # ----------------------------------------------------------------------------------------------------------------------
     # INTERPOLATE SPLINES TO SMALL DISTANCES BETWEEN RACELINE POINTS -------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
 
-    raceline_interp, a_opt, coeffs_x_opt, coeffs_y_opt, spline_inds_opt_interp, t_vals_opt_interp, s_points_opt_interp, \
-        spline_lengths_opt, el_lengths_opt_interp = tph.trajectory_planning_helpers.create_raceline.\
-        create_raceline(refline=reftrack_interp[:, :2],
-                        normvectors=normvec_normalized_interp,
-                        alpha=alpha_opt,
-                        stepsize_interp=pars["stepsize_opts"]["stepsize_interp_after_opt"])
+    (
+        raceline_interp,
+        a_opt,
+        coeffs_x_opt,
+        coeffs_y_opt,
+        spline_inds_opt_interp,
+        t_vals_opt_interp,
+        s_points_opt_interp,
+        spline_lengths_opt,
+        el_lengths_opt_interp,
+    ) = tph.trajectory_planning_helpers.create_raceline.create_raceline(
+        refline=reftrack_interp[:, :2],
+        normvectors=normvec_normalized_interp,
+        alpha=alpha_opt,
+        stepsize_interp=pars["stepsize_opts"]["stepsize_interp_after_opt"],
+    )
 
     # ----------------------------------------------------------------------------------------------------------------------
     # CALCULATE HEADING AND CURVATURE --------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
 
     # calculate heading and curvature (analytically)
-    psi_vel_opt, kappa_opt = tph.trajectory_planning_helpers.calc_head_curv_an.\
-        calc_head_curv_an(coeffs_x=coeffs_x_opt,
-                          coeffs_y=coeffs_y_opt,
-                          ind_spls=spline_inds_opt_interp,
-                          t_spls=t_vals_opt_interp)
+    (
+        psi_vel_opt,
+        kappa_opt,
+    ) = tph.trajectory_planning_helpers.calc_head_curv_an.calc_head_curv_an(
+        coeffs_x=coeffs_x_opt,
+        coeffs_y=coeffs_y_opt,
+        ind_spls=spline_inds_opt_interp,
+        t_spls=t_vals_opt_interp,
+    )
 
     # ----------------------------------------------------------------------------------------------------------------------
     # CALCULATE VELOCITY AND ACCELERATION PROFILE --------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
 
-    if opt_type == 'mintime' and not mintime_opts.recalc_vel_profile_by_tph:
+    if opt_type == "mintime" and not mintime_opts.recalc_vel_profile_by_tph:
         # interpolation
         s_splines = np.cumsum(spline_lengths_opt)
         s_splines = np.insert(s_splines, 0, 0.0)
         vx_profile_opt = np.interp(s_points_opt_interp, s_splines[:-1], v_opt)
 
     else:
-        vx_profile_opt = tph.trajectory_planning_helpers.calc_vel_profile.\
-            calc_vel_profile(ggv=ggv, # type: ignore
-                             ax_max_machines=ax_max_machines, # type: ignore
-                             v_max=pars["veh_params"]["v_max"],
-                             kappa=kappa_opt,
-                             el_lengths=el_lengths_opt_interp,
-                             closed=True,
-                             filt_window=pars["vel_calc_opts"]["vel_profile_conv_filt_window"],
-                             dyn_model_exp=pars["vel_calc_opts"]["dyn_model_exp"],
-                             drag_coeff=pars["veh_params"]["dragcoeff"],
-                             m_veh=pars["veh_params"]["mass"])
+        vx_profile_opt = (
+            tph.trajectory_planning_helpers.calc_vel_profile.calc_vel_profile(
+                ggv=ggv,  # type: ignore
+                ax_max_machines=ax_max_machines,  # type: ignore
+                v_max=pars["veh_params"]["v_max"],
+                kappa=kappa_opt,
+                el_lengths=el_lengths_opt_interp,
+                closed=True,
+                filt_window=pars["vel_calc_opts"]["vel_profile_conv_filt_window"],
+                dyn_model_exp=pars["vel_calc_opts"]["dyn_model_exp"],
+                drag_coeff=pars["veh_params"]["dragcoeff"],
+                m_veh=pars["veh_params"]["mass"],
+            )
+        )
 
     # calculate longitudinal acceleration profile
     vx_profile_opt_cl = np.append(vx_profile_opt, vx_profile_opt[0])
-    ax_profile_opt = tph.trajectory_planning_helpers.calc_ax_profile.calc_ax_profile(vx_profile=vx_profile_opt_cl, # type: ignore
-                                                         el_lengths=el_lengths_opt_interp,
-                                                         eq_length_output=False)
+    ax_profile_opt = tph.trajectory_planning_helpers.calc_ax_profile.calc_ax_profile(
+        vx_profile=vx_profile_opt_cl,  # type: ignore
+        el_lengths=el_lengths_opt_interp,
+        eq_length_output=False,
+    )
 
     # calculate laptime
-    t_profile_cl = tph.trajectory_planning_helpers.calc_t_profile.calc_t_profile(vx_profile=vx_profile_opt,
-                                                     ax_profile=ax_profile_opt,
-                                                     el_lengths=el_lengths_opt_interp)
+    t_profile_cl = tph.trajectory_planning_helpers.calc_t_profile.calc_t_profile(
+        vx_profile=vx_profile_opt,
+        ax_profile=ax_profile_opt,
+        el_lengths=el_lengths_opt_interp,
+    )
     print("INFO: Estimated laptime: %.2fs" % t_profile_cl[-1])
 
     if plot_opts.racetraj_vel:
@@ -405,103 +550,146 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
 
     if lap_time_mat_opts.use_lap_time_mat:
         # simulate lap times
-        ggv_scales = np.linspace(lap_time_mat_opts.gg_scale_range[0],
-                                 lap_time_mat_opts.gg_scale_range[1],
-                                 int((lap_time_mat_opts.gg_scale_range[1] - lap_time_mat_opts.gg_scale_range[0])
-                                     / lap_time_mat_opts.gg_scale_stepsize) + 1)
-        top_speeds = np.linspace(lap_time_mat_opts.top_speed_range[0] / 3.6,
-                                 lap_time_mat_opts.top_speed_range[1] / 3.6,
-                                 int((lap_time_mat_opts.top_speed_range[1] - lap_time_mat_opts.top_speed_range[0])
-                                     / lap_time_mat_opts.top_speed_stepsize) + 1)
+        ggv_scales = np.linspace(
+            lap_time_mat_opts.gg_scale_range[0],
+            lap_time_mat_opts.gg_scale_range[1],
+            int(
+                (
+                    lap_time_mat_opts.gg_scale_range[1]
+                    - lap_time_mat_opts.gg_scale_range[0]
+                )
+                / lap_time_mat_opts.gg_scale_stepsize
+            )
+            + 1,
+        )
+        top_speeds = np.linspace(
+            lap_time_mat_opts.top_speed_range[0] / 3.6,
+            lap_time_mat_opts.top_speed_range[1] / 3.6,
+            int(
+                (
+                    lap_time_mat_opts.top_speed_range[1]
+                    - lap_time_mat_opts.top_speed_range[0]
+                )
+                / lap_time_mat_opts.top_speed_stepsize
+            )
+            + 1,
+        )
 
         # setup results matrix
         lap_time_matrix = np.zeros(
-            (top_speeds.shape[0] + 1, ggv_scales.shape[0] + 1)) # type: ignore
+            (top_speeds.shape[0] + 1, ggv_scales.shape[0] + 1)
+        )  # type: ignore
 
         # write parameters in first column and row
-        lap_time_matrix[1:, 0] = top_speeds * 3.6 # type: ignore
+        lap_time_matrix[1:, 0] = top_speeds * 3.6  # type: ignore
         lap_time_matrix[0, 1:] = ggv_scales
 
         for i, top_speed in enumerate(top_speeds):
             for j, ggv_scale in enumerate(ggv_scales):
-                tph.trajectory_planning_helpers.progressbar.progressbar(i*ggv_scales.shape[0] + j, # type: ignore
-                                            top_speeds.shape[0] * # type: ignore
-                                            ggv_scales.shape[0], # type: ignore
-                                            prefix="Simulating laptimes ")
+                tph.trajectory_planning_helpers.progressbar.progressbar(
+                    i * ggv_scales.shape[0] + j,  # type: ignore
+                    top_speeds.shape[0]
+                    * ggv_scales.shape[  # type: ignore
+                        0
+                    ],  # type: ignore
+                    prefix="Simulating laptimes ",
+                )
 
                 ggv_mod = np.copy(ggv)
                 ggv_mod[:, 1:] *= ggv_scale
 
-                vx_profile_opt = tph.trajectory_planning_helpers.calc_vel_profile.\
-                    calc_vel_profile(ggv=ggv_mod,
-                                     ax_max_machines=ax_max_machines, # type: ignore
-                                     v_max=top_speed,
-                                     kappa=kappa_opt,
-                                     el_lengths=el_lengths_opt_interp,
-                                     dyn_model_exp=pars["vel_calc_opts"]["dyn_model_exp"],
-                                     filt_window=pars["vel_calc_opts"]["vel_profile_conv_filt_window"],
-                                     closed=True,
-                                     drag_coeff=pars["veh_params"]["dragcoeff"],
-                                     m_veh=pars["veh_params"]["mass"])
+                vx_profile_opt = (
+                    tph.trajectory_planning_helpers.calc_vel_profile.calc_vel_profile(
+                        ggv=ggv_mod,
+                        ax_max_machines=ax_max_machines,  # type: ignore
+                        v_max=top_speed,
+                        kappa=kappa_opt,
+                        el_lengths=el_lengths_opt_interp,
+                        dyn_model_exp=pars["vel_calc_opts"]["dyn_model_exp"],
+                        filt_window=pars["vel_calc_opts"][
+                            "vel_profile_conv_filt_window"
+                        ],
+                        closed=True,
+                        drag_coeff=pars["veh_params"]["dragcoeff"],
+                        m_veh=pars["veh_params"]["mass"],
+                    )
+                )
 
                 # calculate longitudinal acceleration profile
-                vx_profile_opt_cl = np.append(
-                    vx_profile_opt, vx_profile_opt[0])
-                ax_profile_opt = tph.trajectory_planning_helpers.calc_ax_profile.calc_ax_profile(vx_profile=vx_profile_opt_cl, # type: ignore
-                                                                     el_lengths=el_lengths_opt_interp,
-                                                                     eq_length_output=False)
+                vx_profile_opt_cl = np.append(vx_profile_opt, vx_profile_opt[0])
+                ax_profile_opt = (
+                    tph.trajectory_planning_helpers.calc_ax_profile.calc_ax_profile(
+                        vx_profile=vx_profile_opt_cl,  # type: ignore
+                        el_lengths=el_lengths_opt_interp,
+                        eq_length_output=False,
+                    )
+                )
 
                 # calculate lap time
-                t_profile_cl = tph.trajectory_planning_helpers.calc_t_profile.calc_t_profile(vx_profile=vx_profile_opt,
-                                                                 ax_profile=ax_profile_opt,
-                                                                 el_lengths=el_lengths_opt_interp)
+                t_profile_cl = (
+                    tph.trajectory_planning_helpers.calc_t_profile.calc_t_profile(
+                        vx_profile=vx_profile_opt,
+                        ax_profile=ax_profile_opt,
+                        el_lengths=el_lengths_opt_interp,
+                    )
+                )
 
                 # store entry in lap time matrix
                 lap_time_matrix[i + 1, j + 1] = t_profile_cl[-1]
 
         # store lap time matrix to file
-        np.savetxt(file_paths["lap_time_mat_export"],
-                   lap_time_matrix, delimiter=",", fmt="%.3f")
+        np.savetxt(
+            file_paths["lap_time_mat_export"],
+            lap_time_matrix,
+            delimiter=",",
+            fmt="%.3f",
+        )
 
     # ----------------------------------------------------------------------------------------------------------------------
     # DATA POSTPROCESSING --------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
 
     # arrange data into one trajectory
-    trajectory_opt = np.column_stack((s_points_opt_interp,
-                                      raceline_interp,
-                                      psi_vel_opt,
-                                      kappa_opt,
-                                      vx_profile_opt,
-                                      ax_profile_opt))
-    spline_data_opt = np.column_stack(
-        (spline_lengths_opt, coeffs_x_opt, coeffs_y_opt))
+    trajectory_opt = np.column_stack(
+        (
+            s_points_opt_interp,
+            raceline_interp,
+            psi_vel_opt,
+            kappa_opt,
+            vx_profile_opt,
+            ax_profile_opt,
+        )
+    )
+    spline_data_opt = np.column_stack((spline_lengths_opt, coeffs_x_opt, coeffs_y_opt))
 
     # create a closed race trajectory array
-    traj_race_cl = np.vstack((trajectory_opt, trajectory_opt[0, :])) # type: ignore
+    traj_race_cl = np.vstack((trajectory_opt, trajectory_opt[0, :]))  # type: ignore
     traj_race_cl[-1, 0] = np.sum(spline_data_opt[:, 0])  # type: ignore # set correct length
 
     # print end time
-    print("INFO: Runtime from import to final trajectory was %.2fs" %
-          (time.perf_counter() - t_start))
+    print(
+        "INFO: Runtime from import to final trajectory was %.2fs"
+        % (time.perf_counter() - t_start)
+    )
 
     # ----------------------------------------------------------------------------------------------------------------------
     # CHECK TRAJECTORY -----------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
 
-    bound1, bound2 = check_traj.\
-        check_traj(reftrack=reftrack_interp,
-                   reftrack_normvec_normalized=normvec_normalized_interp,
-                   length_veh=pars["veh_params"]["length"],
-                   width_veh=pars["veh_params"]["width"],
-                   debug=debug,
-                   trajectory=trajectory_opt, # type: ignore
-                   ggv=ggv, # type: ignore
-                   ax_max_machines=ax_max_machines, # type: ignore
-                   v_max=pars["veh_params"]["v_max"],
-                   curvlim=pars["veh_params"]["curvlim"],
-                   mass_veh=pars["veh_params"]["mass"],
-                   dragcoeff=pars["veh_params"]["dragcoeff"])
+    bound1, bound2 = check_traj.check_traj(
+        reftrack=reftrack_interp,
+        reftrack_normvec_normalized=normvec_normalized_interp,
+        length_veh=pars["veh_params"]["length"],
+        width_veh=pars["veh_params"]["width"],
+        debug=debug,
+        trajectory=trajectory_opt,  # type: ignore
+        ggv=ggv,  # type: ignore
+        ax_max_machines=ax_max_machines,  # type: ignore
+        v_max=pars["veh_params"]["v_max"],
+        curvlim=pars["veh_params"]["curvlim"],
+        mass_veh=pars["veh_params"]["mass"],
+        dragcoeff=pars["veh_params"]["dragcoeff"],
+    )
 
     # ----------------------------------------------------------------------------------------------------------------------
     # EXPORT ---------------------------------------------------------------------------------------------------------------
@@ -509,17 +697,20 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
 
     # export race trajectory  to CSV
     if "traj_race_export" in file_paths.keys():
-        export_traj_race.export_traj_race_f110(file_paths=file_paths,
-                                                                     traj_race=traj_race_cl) # type: ignore
+        export_traj_race.export_traj_race_f110(
+            file_paths=file_paths, traj_race=traj_race_cl
+        )  # type: ignore
 
     # if requested, export trajectory including map information (via normal vectors) to CSV
     if "traj_ltpl_export" in file_paths.keys():
-        export_traj_ltpl.export_traj_ltpl(file_paths=file_paths,
-                                                                spline_lengths_opt=spline_lengths_opt,
-                                                                trajectory_opt=trajectory_opt,
-                                                                reftrack=reftrack_interp,
-                                                                normvec_normalized=normvec_normalized_interp,
-                                                                alpha_opt=alpha_opt)
+        export_traj_ltpl.export_traj_ltpl(
+            file_paths=file_paths,
+            spline_lengths_opt=spline_lengths_opt,
+            trajectory_opt=trajectory_opt,
+            reftrack=reftrack_interp,
+            normvec_normalized=normvec_normalized_interp,
+            alpha_opt=alpha_opt,
+        )
 
     print("INFO: Finished export of trajectory:", time.strftime("%H:%M:%S"))
 
@@ -535,24 +726,34 @@ def launch_globaltraj_optimization(track_path: str, output_path: str, vehicle_pa
         # try to extract four times as many points as in the interpolated version (in order to hold more details)
         n_skip = max(int(reftrack_imp.shape[0] / (bound1.shape[0] * 4)), 1)
 
-        _, _, _, normvec_imp = tph.trajectory_planning_helpers.calc_splines.calc_splines(path=np.vstack((reftrack_imp[::n_skip, 0:2],
-                                                                            reftrack_imp[0, 0:2]))) # type: ignore
+        (
+            _,
+            _,
+            _,
+            normvec_imp,
+        ) = tph.trajectory_planning_helpers.calc_splines.calc_splines(
+            path=np.vstack((reftrack_imp[::n_skip, 0:2], reftrack_imp[0, 0:2]))
+        )  # type: ignore
 
-        bound1_imp = reftrack_imp[::n_skip, :2] + normvec_imp * \
-            np.expand_dims(reftrack_imp[::n_skip, 2], 1)
-        bound2_imp = reftrack_imp[::n_skip, :2] - normvec_imp * \
-            np.expand_dims(reftrack_imp[::n_skip, 3], 1)
+        bound1_imp = reftrack_imp[::n_skip, :2] + normvec_imp * np.expand_dims(
+            reftrack_imp[::n_skip, 2], 1
+        )
+        bound2_imp = reftrack_imp[::n_skip, :2] - normvec_imp * np.expand_dims(
+            reftrack_imp[::n_skip, 3], 1
+        )
 
     # plot results
-    result_plots.result_plots(plot_opts=plot_opts.__dict__,
-                                                    width_veh_opt=pars["optim_opts"]["width_opt"],
-                                                    width_veh_real=pars["veh_params"]["width"],
-                                                    refline=reftrack_interp[:, :2],
-                                                    bound1_imp=bound1_imp, # type: ignore
-                                                    bound2_imp=bound2_imp, # type: ignore
-                                                    bound1_interp=bound1,
-                                                    bound2_interp=bound2,
-                                                    trajectory=trajectory_opt) # type: ignore
+    result_plots.result_plots(
+        plot_opts=plot_opts.__dict__,
+        width_veh_opt=pars["optim_opts"]["width_opt"],
+        width_veh_real=pars["veh_params"]["width"],
+        refline=reftrack_interp[:, :2],
+        bound1_imp=bound1_imp,  # type: ignore
+        bound2_imp=bound2_imp,  # type: ignore
+        bound1_interp=bound1,
+        bound2_interp=bound2,
+        trajectory=trajectory_opt,
+    )  # type: ignore
 
 
 def parse_params_file(vehicle_param_file_path):
@@ -561,41 +762,47 @@ def parse_params_file(vehicle_param_file_path):
     pars = {}
 
     if not parser.read(vehicle_param_file_path):
-        raise ValueError('Specified config file does not exist or is empty!')
+        raise ValueError("Specified config file does not exist or is empty!")
 
-    pars["ggv_file"] = json.loads(parser.get('GENERAL_OPTIONS', 'ggv_file'))
+    pars["ggv_file"] = json.loads(parser.get("GENERAL_OPTIONS", "ggv_file"))
     pars["ax_max_machines_file"] = json.loads(
-        parser.get('GENERAL_OPTIONS', 'ax_max_machines_file'))
-    pars["stepsize_opts"] = json.loads(
-        parser.get('GENERAL_OPTIONS', 'stepsize_opts'))
+        parser.get("GENERAL_OPTIONS", "ax_max_machines_file")
+    )
+    pars["stepsize_opts"] = json.loads(parser.get("GENERAL_OPTIONS", "stepsize_opts"))
     pars["reg_smooth_opts"] = json.loads(
-        parser.get('GENERAL_OPTIONS', 'reg_smooth_opts'))
-    pars["veh_params"] = json.loads(
-        parser.get('GENERAL_OPTIONS', 'veh_params'))
-    pars["vel_calc_opts"] = json.loads(
-        parser.get('GENERAL_OPTIONS', 'vel_calc_opts'))
+        parser.get("GENERAL_OPTIONS", "reg_smooth_opts")
+    )
+    pars["veh_params"] = json.loads(parser.get("GENERAL_OPTIONS", "veh_params"))
+    pars["vel_calc_opts"] = json.loads(parser.get("GENERAL_OPTIONS", "vel_calc_opts"))
 
     # Shortest path
-    pars["optim_opts_shortest_path"] = json.loads(parser.get(
-        'OPTIMIZATION_OPTIONS', 'optim_opts_shortest_path'))
+    pars["optim_opts_shortest_path"] = json.loads(
+        parser.get("OPTIMIZATION_OPTIONS", "optim_opts_shortest_path")
+    )
 
     # Mincurv
-    pars["optim_opts_mincurv"] = json.loads(parser.get(
-        'OPTIMIZATION_OPTIONS', 'optim_opts_mincurv'))
+    pars["optim_opts_mincurv"] = json.loads(
+        parser.get("OPTIMIZATION_OPTIONS", "optim_opts_mincurv")
+    )
 
     # Mintime
-    pars["curv_calc_opts"] = json.loads(
-        parser.get('GENERAL_OPTIONS', 'curv_calc_opts'))
-    pars["optim_opts_mintime"] = json.loads(parser.get(
-        'OPTIMIZATION_OPTIONS', 'optim_opts_mintime'))
+    pars["curv_calc_opts"] = json.loads(parser.get("GENERAL_OPTIONS", "curv_calc_opts"))
+    pars["optim_opts_mintime"] = json.loads(
+        parser.get("OPTIMIZATION_OPTIONS", "optim_opts_mintime")
+    )
     pars["vehicle_params_mintime"] = json.loads(
-        parser.get('OPTIMIZATION_OPTIONS', 'vehicle_params_mintime'))
+        parser.get("OPTIMIZATION_OPTIONS", "vehicle_params_mintime")
+    )
     pars["tire_params_mintime"] = json.loads(
-        parser.get('OPTIMIZATION_OPTIONS', 'tire_params_mintime'))
+        parser.get("OPTIMIZATION_OPTIONS", "tire_params_mintime")
+    )
     pars["pwr_params_mintime"] = json.loads(
-        parser.get('OPTIMIZATION_OPTIONS', 'pwr_params_mintime'))
-    pars["vehicle_params_mintime"]["wheelbase"] = (pars["vehicle_params_mintime"]["wheelbase_front"]
-                                                   + pars["vehicle_params_mintime"]["wheelbase_rear"])
+        parser.get("OPTIMIZATION_OPTIONS", "pwr_params_mintime")
+    )
+    pars["vehicle_params_mintime"]["wheelbase"] = (
+        pars["vehicle_params_mintime"]["wheelbase_front"]
+        + pars["vehicle_params_mintime"]["wheelbase_rear"]
+    )
 
     return pars
 
@@ -603,39 +810,59 @@ def parse_params_file(vehicle_param_file_path):
 def write_params_to_file(params, file_path):
     parser = configparser.ConfigParser()
 
-    parser.add_section('GENERAL_OPTIONS')
-    parser.set('GENERAL_OPTIONS', 'ggv_file', json.dumps(params["ggv_file"]))
-    parser.set('GENERAL_OPTIONS', 'ax_max_machines_file',
-               json.dumps(params["ax_max_machines_file"]))
-    parser.set('GENERAL_OPTIONS', 'stepsize_opts',
-               json.dumps(params["stepsize_opts"]))
-    parser.set('GENERAL_OPTIONS', 'reg_smooth_opts',
-               json.dumps(params["reg_smooth_opts"]))
-    parser.set('GENERAL_OPTIONS', 'veh_params',
-               json.dumps(params["veh_params"]))
-    parser.set('GENERAL_OPTIONS', 'vel_calc_opts',
-               json.dumps(params["vel_calc_opts"]))
-    parser.set('GENERAL_OPTIONS', 'curv_calc_opts',
-               json.dumps(params["curv_calc_opts"]))
+    parser.add_section("GENERAL_OPTIONS")
+    parser.set("GENERAL_OPTIONS", "ggv_file", json.dumps(params["ggv_file"]))
+    parser.set(
+        "GENERAL_OPTIONS",
+        "ax_max_machines_file",
+        json.dumps(params["ax_max_machines_file"]),
+    )
+    parser.set("GENERAL_OPTIONS", "stepsize_opts", json.dumps(params["stepsize_opts"]))
+    parser.set(
+        "GENERAL_OPTIONS", "reg_smooth_opts", json.dumps(params["reg_smooth_opts"])
+    )
+    parser.set("GENERAL_OPTIONS", "veh_params", json.dumps(params["veh_params"]))
+    parser.set("GENERAL_OPTIONS", "vel_calc_opts", json.dumps(params["vel_calc_opts"]))
+    parser.set(
+        "GENERAL_OPTIONS", "curv_calc_opts", json.dumps(params["curv_calc_opts"])
+    )
 
     # Shortest path
-    parser.add_section('OPTIMIZATION_OPTIONS')
-    parser.set('OPTIMIZATION_OPTIONS', 'optim_opts_shortest_path',
-               json.dumps(params["optim_opts_shortest_path"]))
+    parser.add_section("OPTIMIZATION_OPTIONS")
+    parser.set(
+        "OPTIMIZATION_OPTIONS",
+        "optim_opts_shortest_path",
+        json.dumps(params["optim_opts_shortest_path"]),
+    )
 
     # Mincurv
-    parser.set('OPTIMIZATION_OPTIONS', 'optim_opts_mincurv',
-               json.dumps(params["optim_opts_mincurv"]))
+    parser.set(
+        "OPTIMIZATION_OPTIONS",
+        "optim_opts_mincurv",
+        json.dumps(params["optim_opts_mincurv"]),
+    )
 
     # Mintime
-    parser.set('OPTIMIZATION_OPTIONS', 'optim_opts_mintime',
-               json.dumps(params["optim_opts_mintime"]))
-    parser.set('OPTIMIZATION_OPTIONS', 'vehicle_params_mintime',
-               json.dumps(params["vehicle_params_mintime"]))
-    parser.set('OPTIMIZATION_OPTIONS', 'tire_params_mintime',
-               json.dumps(params["tire_params_mintime"]))
-    parser.set('OPTIMIZATION_OPTIONS', 'pwr_params_mintime',
-               json.dumps(params["pwr_params_mintime"]))
+    parser.set(
+        "OPTIMIZATION_OPTIONS",
+        "optim_opts_mintime",
+        json.dumps(params["optim_opts_mintime"]),
+    )
+    parser.set(
+        "OPTIMIZATION_OPTIONS",
+        "vehicle_params_mintime",
+        json.dumps(params["vehicle_params_mintime"]),
+    )
+    parser.set(
+        "OPTIMIZATION_OPTIONS",
+        "tire_params_mintime",
+        json.dumps(params["tire_params_mintime"]),
+    )
+    parser.set(
+        "OPTIMIZATION_OPTIONS",
+        "pwr_params_mintime",
+        json.dumps(params["pwr_params_mintime"]),
+    )
 
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         parser.write(f)
