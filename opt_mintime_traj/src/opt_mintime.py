@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 from typing import Union
 
@@ -191,7 +190,7 @@ def opt_mintime(reftrack: np.ndarray,
 
     # velocity [m/s]
     v_n = ca.SX.sym('v_n')
-    v_s = 50
+    v_s = 5.0
     v = v_s * v_n
 
     # side slip angle [rad]
@@ -201,12 +200,12 @@ def opt_mintime(reftrack: np.ndarray,
 
     # yaw rate [rad/s]
     omega_z_n = ca.SX.sym('omega_z_n')
-    omega_z_s = 1
+    omega_z_s = 1.0
     omega_z = omega_z_s * omega_z_n
 
     # lateral distance to reference line (positive = left) [m]
     n_n = ca.SX.sym('n_n')
-    n_s = 5.0
+    n_s = 1.0
     n = n_s * n_n
 
     # relative angle to tangent on reference line [rad]
@@ -260,17 +259,17 @@ def opt_mintime(reftrack: np.ndarray,
 
     # positive longitudinal force (drive) [N]
     f_drive_n = ca.SX.sym('f_drive_n')
-    f_drive_s = 7500.0
+    f_drive_s = 12.0
     f_drive = f_drive_s * f_drive_n
 
     # negative longitudinal force (brake) [N]
     f_brake_n = ca.SX.sym('f_brake_n')
-    f_brake_s = 20000.0
+    f_brake_s = 12.0
     f_brake = f_brake_s * f_brake_n
 
     # lateral wheel load transfer [N]
     gamma_y_n = ca.SX.sym('gamma_y_n')
-    gamma_y_s = 5000.0
+    gamma_y_s = 50.0
     gamma_y = gamma_y_s * gamma_y_n
 
     # scaling factors for control variables
