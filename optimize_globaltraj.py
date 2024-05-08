@@ -12,13 +12,19 @@ from typing import Union
 import matplotlib.pyplot as plt
 import numpy as np
 import trajectory_planning_helpers as tph
-from helper_funcs_glob.src import (check_traj, export_traj_ltpl,
-                                   export_traj_race, import_track, prep_track,
-                                   result_plots)
+from helper_funcs_glob.src import (
+    check_traj,
+    export_traj_ltpl,
+    export_traj_race,
+    import_track,
+    prep_track,
+    result_plots,
+)
 from opt_mintime_traj.src import opt_mintime
 from typing_extensions import Literal
 
 debug: bool = True  # print console messages
+
 
 @dataclass
 class OptimizationOutput:
@@ -26,7 +32,8 @@ class OptimizationOutput:
     max_ax: float = 0.0
     min_ax: float = 0.0
     estimated_laptime: float = 0.0
-    warnings: "list[str]" = field(default_factory=list) 
+    warnings: "list[str]" = field(default_factory=list)
+
 
 @dataclass
 class PlotOptions:
@@ -97,14 +104,15 @@ class LapTimeOptions:
 
 OptimizationType = Literal["shortest_path", "mincurv", "mincurv_iqp", "mintime"]
 
+
 class OptimLogger(object):
     def __init__(self):
         self.terminal = sys.stdout
         self.log = io.StringIO()
-   
+
     def write(self, message):
         self.terminal.write(message)
-        self.log.write(message)  
+        self.log.write(message)
 
     def flush(self):
         # this flush method is needed for python 3 compatibility.
@@ -134,7 +142,7 @@ def launch_globaltraj_optimization(
     file_paths["module"] = os.path.dirname(os.path.abspath(__file__))
 
     optim_logger = OptimLogger()
-    sys.stdout = optim_logger 
+    sys.stdout = optim_logger
 
     # ----------------------------------------------------------------------------------------------------------------------
     # CHECK USER INPUT -----------------------------------------------------------------------------------------------------
@@ -334,10 +342,6 @@ def launch_globaltraj_optimization(
             alpha_opt,
             reftrack_interp,
             normvec_normalized_interp,
-            _,
-            _,
-            _,
-            _,
         ) = tph.trajectory_planning_helpers.iqp_handler.iqp_handler(
             reftrack=reftrack_interp,
             normvectors=normvec_normalized_interp,
@@ -779,7 +783,7 @@ def launch_globaltraj_optimization(
         bound2_interp=bound2,
         trajectory=trajectory_opt,
     )  # type: ignore
-    
+
     # ----------------------------------------------------------------------------------------------------------------------
     # OUTPUT ---------------------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
@@ -789,38 +793,38 @@ def launch_globaltraj_optimization(
 
 
 def extract_optimization_output(output: str) -> OptimizationOutput:
-        optim_output = OptimizationOutput()
+    optim_output = OptimizationOutput()
 
-        for line in output.split("\n"):
-            if line.startswith("INFO: Maximum abs(ay): "):
-                _, value = line.split("INFO: Maximum abs(ay): ")
-                value = value.replace("m/s2", "")
-                value = float(value)
+    for line in output.split("\n"):
+        if line.startswith("INFO: Maximum abs(ay): "):
+            _, value = line.split("INFO: Maximum abs(ay): ")
+            value = value.replace("m/s2", "")
+            value = float(value)
 
-                optim_output.max_abs_ay = value
-            elif line.startswith("INFO: Maximum ax: "):
-                _, value = line.split("INFO: Maximum ax: ")
-                value = value.replace("m/s2", "")
-                value = float(value)
+            optim_output.max_abs_ay = value
+        elif line.startswith("INFO: Maximum ax: "):
+            _, value = line.split("INFO: Maximum ax: ")
+            value = value.replace("m/s2", "")
+            value = float(value)
 
-                optim_output.max_ax = value
-            elif line.startswith("INFO: Minimum ax: "):
-                _, value = line.split("INFO: Minimum ax: ")
-                value = value.replace("m/s2", "")
-                value = float(value)
+            optim_output.max_ax = value
+        elif line.startswith("INFO: Minimum ax: "):
+            _, value = line.split("INFO: Minimum ax: ")
+            value = value.replace("m/s2", "")
+            value = float(value)
 
-                optim_output.min_ax = value
-            elif line.startswith("INFO: Estimated laptime: "):
-                _, value = line.split("INFO: Estimated laptime: ")
-                value = value.replace("s", "")
-                value = float(value)
+            optim_output.min_ax = value
+        elif line.startswith("INFO: Estimated laptime: "):
+            _, value = line.split("INFO: Estimated laptime: ")
+            value = value.replace("s", "")
+            value = float(value)
 
-                optim_output.estimated_laptime = value
-            elif line.startswith("WARNING: "):
-                _, value = line.split("WARNING: ")
-                optim_output.warnings.append(value)
+            optim_output.estimated_laptime = value
+        elif line.startswith("WARNING: "):
+            _, value = line.split("WARNING: ")
+            optim_output.warnings.append(value)
 
-        return optim_output
+    return optim_output
 
 
 def parse_params_file(vehicle_param_file_path):
