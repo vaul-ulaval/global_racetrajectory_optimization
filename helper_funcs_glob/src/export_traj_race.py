@@ -56,9 +56,12 @@ def export_traj_race_f110(file_paths: dict, traj_race: np.ndarray) -> None:
     """
 
     # export race trajectory
-    fmt = "%.7f,%.7f,%.7f,%.7f,%.7f,%.7f"
+    header = "x_m, y_m, vx_mps, psi_rad, ax_mps2, kappa_radpm, s_m"
+    fmt = "%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f"
     with open(file_paths["traj_race_export"], "wb") as fh:
-        np.savetxt(fh, traj_race[:, [1, 2, 5, 3, 6, 4]], fmt=fmt, comments="")
+        np.savetxt(
+            fh, traj_race[:, [1, 2, 5, 3, 6, 4, 0]], fmt=fmt, comments="", header=header
+        )
 
 
 # testing --------------------------------------------------------------------------------------------------------------
